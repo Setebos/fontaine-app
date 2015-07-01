@@ -22,6 +22,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
 import org.json.JSONArray;
@@ -35,12 +36,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     GPSTracker gps;
     Button btnShowLocation;
+    Marker positionMarker = null;
     private ProgressDialog pDialog;
     // URL to get contacts JSON
     private static String url = "https://download.data.grandlyon.com/wfs/grandlyon?SERVICE=WFS&VERSION=2.0.0&outputformat=GEOJSON&maxfeatures=200&request=GetFeature&typename=epo_eau_potable.epobornefont";
 
     private static final String MARKER_ID = "gid";
-    private static final String MARKER_COORDINATES = "coordinates";
+    private static final String MARKER_LATITUDE = "latitude";
+    private static final String MARKER_LONGITUDE = "longitude";
 
     // contacts JSONArray
     JSONArray markers = null;
@@ -70,13 +73,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onClick(View arg0) {
                 gps = new GPSTracker(MapsActivity.this);
+                if(positionMarker != null) {
+                    positionMarker.remove();
+                }
                 if (gps.canGetLocation()) {
 
                     double latitude = gps.getLatitude();
                     double longitude = gps.getLongitude();
 
                     LatLng myPosition = new LatLng(latitude, longitude);
-                    map.addMarker(new MarkerOptions().position(myPosition).title("Ma position"));
+                    positionMarker = map.addMarker(new MarkerOptions().position(myPosition).title("Ma position"));
                     map.moveCamera(CameraUpdateFactory.newLatLng(myPosition));
 
                     // \n is for new line
@@ -129,28 +135,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         JSONObject c = markers.getJSONObject(i);
 
                         String id = c.getString(MARKER_ID);
-                        String coordinates = c.getString(MARKER_COORDINATES[0]);
-                        String email = c.getString(TAG_EMAIL);
-                        String address = c.getString(TAG_ADDRESS);
-                        String gender = c.getString(TAG_GENDER);
-
-                        // Phone node is JSON Object
-                        JSONObject phone = c.getJSONObject(TAG_PHONE);
-                        String mobile = phone.getString(TAG_PHONE_MOBILE);
-                        String home = phone.getString(TAG_PHONE_HOME);
-                        String office = phone.getString(TAG_PHONE_OFFICE);
+                        String latitude = c.getString(MARKER_LATITUDE);
+                        String longitude = c.getString(MARKER_LONGITUDE);
 
                         // tmp hashmap for single contact
-                        HashMap<String, String> contact = new HashMap<String, String>();
+                        HashMap<String, String> marker = new HashMap<String, String>();
 
                         // adding each child node to HashMap key => value
-                        contact.put(TAG_ID, id);
-                        contact.put(TAG_NAME, name);
-                        contact.put(TAG_EMAIL, email);
-                        contact.put(TAG_PHONE_MOBILE, mobile);
+                        marker.put(MARKER_ID, id);
+                        marker.put(MARKER_LATITUDE, latitude);
+                        marker.put(MARKER_LONGITUDE, longitude);
 
                         // adding contact to contact list
-                        contactList.add(contact);
+                        markersList.add(marker);
                     }
                 } catch (JSONException e) {
                     e.printStackTrace();
@@ -168,16 +165,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             // Dismiss the progress dialog
             if (pDialog.isShowing())
                 pDialog.dismiss();
-            /**
-             * Updating parsed JSON data into ListView
-             * */
-            ListAdapter adapter = new SimpleAdapter(
-                    MainActivity.this, contactList,
-                    R.layout.list_item, new String[] { TAG_NAME, TAG_EMAIL,
-                    TAG_PHONE_MOBILE }, new int[] { R.id.name,
-                    R.id.email, R.id.mobile });
-
-            setListAdapter(adapter);
         }
 
     }
